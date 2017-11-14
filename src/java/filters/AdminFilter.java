@@ -5,12 +5,16 @@
  */
 package filters;
 
+import dataaccess.NotesDBException;
 import dataaccess.UserDB;
+import domainmodel.Role;
 import domainmodel.User;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -23,46 +27,38 @@ import javax.servlet.http.HttpSession;
 
 /**
  *
- * @author awarsyle
+ * @author 677571
  */
-public class AuthenticationFilter implements Filter {
+public class AdminFilter implements Filter {
 
     private FilterConfig filterConfig = null;
 
-    @Override
     public void doFilter(ServletRequest request, ServletResponse response,
             FilterChain chain)
             throws IOException, ServletException {
 
-        // this code executes before the servlet
-        // ...
         UserDB db = new UserDB();
-
-        // ensure user is authenticated
         HttpSession session = ((HttpServletRequest) request).getSession();
         String username = (String) session.getAttribute("username");
-
-        if (username != null && username != "") {
-            // yes, go onwards to the servlet or next filter
-            
-                    chain.doFilter(request, response);
-
-
-        } else {
-            // get out of here!
+        try {
+            User user = db.getUser(username);
+            Role role = user.getRole();
+            if (role.getRoleName().equalsIgnoreCase("admin")) {
+                chain.doFilter(request, response);
+            } else {
+                ((HttpServletResponse) response).sendRedirect("home");
+            }
+        } catch (NotesDBException ex) {
             ((HttpServletResponse) response).sendRedirect("login");
         }
 
-        // this code executes after the servlet
-        // ...
     }
 
-    @Override
     public void destroy() {
     }
 
     @Override
-    public void init(FilterConfig filterConfig) {
+    public void init(FilterConfig filterConfig) throws ServletException {
         this.filterConfig = filterConfig;
     }
 
